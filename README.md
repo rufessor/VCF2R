@@ -5,7 +5,7 @@ Copyright 2015 Matthew F. Hockin Ph.D. The University of Utah.
 This program is distributed in the hope that it will be
 useful, but it is provided “as is” and without any express
 or implied warranties. For details, see the full text of
-the license in the file VCF2R_LICENSE 
+the license.
 
 VCF2R Requires your input vcf file to be sorted by chromosome and position- aside from that it requires a vcf formatted file.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- we find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package. 
 

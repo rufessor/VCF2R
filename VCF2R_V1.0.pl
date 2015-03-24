@@ -7,6 +7,7 @@ $| = 1;     #Do not buffer output to std error
 #All rights reserved
 #The University of Utah
 ######mhockin@gmail.com
+#hosted on github.com user rufessor
 
 use Getopt::Long;   
 use File::Basename;

@@ -5,7 +5,11 @@ useful, but it is provided “as is” and without any express
 or implied warranties. For details, see the full text of
 the license in the file VCF2R_LICENSE 
 
-VCF2R Requires your input vcf file to be sorted by chromosome and position- aside from that it requires a vcf formatted file.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- we find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package. 
+VCF2R Requires your input vcf file to be sorted so that for each chromosome the POS field for called variants are in increasing linear order- aside from that it requires a vcf formatted file.  The order of chromosome appearance in the vcf file is not important- that they exists as contiguous blocks is crucial, VCF2R tracks chromosome completion and odd behavior will ensue if multiple blocks for the same chromosome are encountered- so if your worried sort that column as well.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- we find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package. 
+
+If you need to sort a vcf file- try this.
+grep '^#' sortme.vcf > sorted.vcf && grep -v '^#' sortme.vcf | LC_ALL=C sort -k1,1 -k2,2n >> sorted.vcf
+This works by first writing the header as is to the sorted.vcf file, then appending the sorted variant calls to it.
 
 Dependicies- CPAN
 Getopt::Long

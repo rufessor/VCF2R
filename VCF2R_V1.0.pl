@@ -68,7 +68,7 @@ sub ParseCommand{
                 'chr=s', => \$pullChrs,        
                 'region=s' => \$pullRegions,  
                 'out=s' => \$fileOut,
-                'parsedeep' => \$deparse);    
+                'deparse' => \$deparse);    
     my @pullFields = split(/,/ , uc $pullFields) if $pullFields;
     my @pullInfo = split(/,/ , uc $pullInfo) if $pullInfo;
     my @pullChrs = split(/,/ , $pullChrs) if $pullChrs;

@@ -1,11 +1,9 @@
-# VCF2R
-Genomic data VCF parser.  Generates files designed to import into R as long data frame for ggplot2 or other analyses.
 Copyright 2015 Matthew F. Hockin Ph.D. The University of Utah.  
 
 This program is distributed in the hope that it will be
 useful, but it is provided “as is” and without any express
 or implied warranties. For details, see the full text of
-the license.
+the license in the file VCF2R_LICENSE 
 
 VCF2R Requires your input vcf file to be sorted by chromosome and position- aside from that it requires a vcf formatted file.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- we find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package. 
 
@@ -15,13 +13,20 @@ File::Basename
 
 VCF2R_V1.0.pl is a VCF parser designed with a single purpose in mind, generate a data file that enables immediate import into R as a properly formatted long data frame suitable for faceted ggpolot2 analyses.  VCF2R enables you to specify the exact fields, chromosomes, and even chromosome regions you would like to output.  In order to extend the greatest possible flexibility in structuring output, VCF2R accepts extensive command line options in the form-
 
---region= {CSL} --chr= {CSL} --field= {VCF Header fields} 
---info= {VCF info subfields} --deparse (flag no value) 
+OPTION SELECTIONS
+--field= {VCF Header fields as CSL} --info= {VCF info subfields as CSL}
+--chr= {CSL} --region= {CSL} --deparse (flag no value) 
+REQUIRED 
 --out= {output file name}
 
-VCF2R learns the header of the input file and thus any INFO or HEADER field may be selected for output by simply including multiple items as a comma separated list (CSL).  
+The general syntax to run VCF2R is as follows (last item must be inputfile.vcf option ordering is up to you).
+
+perl VCF2R_V1.0.pl {--option1=VAL,VAL,VAL} {--option2=VAL,VAL} --out=outputFile inputfile.vcf
+
+VCF2R learns the header of the input file and thus any INFO or HEADER field may be selected for output by simply including multiple items as a comma separated list (CSL) e.g.
 
 --field=ID,REF,ALT,QUAL,FILTER
+
 By DEFAULT VCF2R generates the CHROM and POS fields- there is no need to specify them on the command line 
 e.g. --field=CHROM,POS but also no penalty for doing so.  The following command would output CHROM and POS for every called variant on every chromosome of inputFile.vcf
 
@@ -50,7 +55,7 @@ perl VCF2R_V1.0_pl --field=REF,QUAL --chr=1,12,Y
 --region=1000,4000,50000,150000-1000,100000
 --out outputFileName inputFile.vcf
 
-Finally, the “INFO” field in vcf files often contains information that might be of interest but otherwise is not conveniently formatted.  VCF2R enables you to include any valid INFO subfield (VCF2R learns these from the input file) through use of the --info command line option.  To include a INFO subfield with the name “AT” and “SVLEN”
+Finally, the “INFO” field in vcf files often contains information that might be of interest but otherwise is not conveniently formatted.  VCF2R enables you to include any valid INFO subfield (VCF2R learns these from input file) through use of the --info command line option.  To include a INFO subfield with the name “AT” and “SVLEN”
  
 perl VCF2R_V1.0_pl --field=REF,QUAL --info=AT,SVLEN --out outputFileName inputFile.vcf
 

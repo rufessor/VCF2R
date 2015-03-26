@@ -59,6 +59,14 @@ perl VCF2R_V1.0_pl --field=REF,QUAL --chr=1,12,Y
 --region=1000,4000,50000,150000-1000,100000
 --out outputFileName inputFile.vcf
 
+ONE last thing about --chr
+You may provide a integer range (it must be listed first) like this and you MUST use low-high (1-10 in example)
+--chr=1-10  (yielding output for chromosomes 1,2,3,4,5,6,7,8,9,10
+You may also combine a range with a list- like this 
+--chr=1-10,X,Y,21 (adding X,Y,21 to the END of the above list)
+It is possible to use the range and even the range + list with the --region command... but easily screwed up.
+The dash delimited region specifications will be applied in per chr order of the complete list generated from --chr
+
 Finally, the “INFO” field in vcf files often contains information that might be of interest but otherwise is not conveniently formatted.  VCF2R enables you to include any valid INFO subfield (VCF2R learns these from input file) through use of the --info command line option.  To include a INFO subfield with the name “AT” and “SVLEN”
  
 perl VCF2R_V1.0_pl --field=REF,QUAL --info=AT,SVLEN --out outputFileName inputFile.vcf

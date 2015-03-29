@@ -5,11 +5,11 @@ useful, but it is provided “as is” and without any express
 or implied warranties. For details, see the full text of
 the license in the file VCF2R_LICENSE 
 
-VCF2R Requires your input vcf file to be sorted so that for each chromosome the POS field for called variants are in increasing linear order- aside from that it requires a vcf formatted file.  The order of chromosome appearance in the vcf file is not important- that they exists as contiguous blocks is crucial, VCF2R tracks chromosome completion and odd behavior will ensue if multiple blocks for the same chromosome are encountered- so if your worried sort that column as well.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- we find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package. 
+VCF2R Requires your input vcf file to be sorted so that for each chromosome the POS field for called variants are in increasing linear order- aside from that it requires a vcf formatted file.  The order of chromosome appearance in the vcf file is not important- that they exists as contiguous blocks is crucial.  It has been extensively tested using vcf’s generated from WHAM and FreeBayes on whole genome 20X read data sets from multiple species- I find it extremely useful as an enabling tool for data visualization using R and the ggplot2 package.  VCF2R outputs verbose dialogue of its progress when working on a file- this is written to STDERR.
 
 If you need to sort a vcf file- try this.
 grep '^#' sortme.vcf > sorted.vcf && grep -v '^#' sortme.vcf | LC_ALL=C sort -k1,1 -k2,2n >> sorted.vcf
-This works by first writing the header as is to the sorted.vcf file, then appending the sorted variant calls to it.
+This works by first writing the header as is to the sorted.vcf file, then appending the sorted variant calls to it. 
 
 Dependicies- CPAN
 Getopt::Long
@@ -17,7 +17,7 @@ File::Basename
 
 VCF2R_V1.0.pl is a VCF parser designed with a single purpose in mind, generate a data file that enables immediate import into R as a properly formatted long data frame suitable for faceted ggpolot2 analyses.  VCF2R enables you to specify the exact fields, chromosomes, and even chromosome regions you would like to output.  In order to extend the greatest possible flexibility in structuring output, VCF2R accepts extensive command line options in the form-
 
-OPTION SELECTIONS
+COMMAND LINE OPTIONS --<opt>
 --field= {VCF Header fields as CSL} --info= {VCF info subfields as CSL}
 --chr= {CSL} --region= {CSL} --deparse (flag no value) 
 REQUIRED 
@@ -38,11 +38,11 @@ perl VCF2R_V1.0_pl --out output_File_Name inputFile.vcf
 As would this:
 perl VCF2R_V1.0_pl --field=CHROM,POS --out outputFileName inputFile.vcf
 
-A basic but complete command to VCF2R- generating a file with CHROM, POS, REF, and QUAL fields for every called variant.
+A basic but complete command to VCF2R- generating a file with CHROM, POS, REF, and QUAL fields for every called variant and capturing output to STDERR as a file
 
-perl VCF2R_V1.0_pl --field=REF,QUAL --out outputFileName inputFile.vcf
+perl VCF2R_V1.0_pl --field=REF,QUAL --out outputFileName /my/path/is/optional/inputFile.vcf 2>outputFileName.err
 
-Note input file is specified LAST without flag and may be a relative or absolute unix file path.
+Note input file must follow all command line options and may be a relative or absolute unix file path.
 
 To restrict this list to contain only those calls found for Chromosome 1 and 12
 
@@ -53,19 +53,17 @@ To further restrict this to list variants within the bp coordinate regions 1000-
 perl VCF2R_V1.0_pl --field=REF,QUAL --chr=1,12 
 --region=1000,4000,50000,150000 --out outputFileName inputFile.vcf
 
-So long as the lists of --chr and --region are in the same order one can specify arbitrary numbers of regions per chromosome by simply separating chromosome region bounds with a single “dash” (-).  Thus, adding to prior a restriction that chr 12 output only between 1000 and 1000000 bp AND include every variant on the Y-
+So long as the lists of --chr and --region are in the same order one can specify arbitrary numbers of regions or region chromosome pairs.  (,) deliniates intrachromosomal boundries (-) delinates chromosome boundries.  Thus, adding to prior a restriction that chr 12 output only between 1000 and 1000000 bp AND include every variant on the Y-
 
 perl VCF2R_V1.0_pl --field=REF,QUAL --chr=1,12,Y 
 --region=1000,4000,50000,150000-1000,100000
 --out outputFileName inputFile.vcf
 
 ONE last thing about --chr
-You may provide a integer range (it must be listed first) like this and you MUST use low-high (1-10 in example)
---chr=1-10  (yielding output for chromosomes 1,2,3,4,5,6,7,8,9,10
-You may also combine a range with a list- like this 
+You may provide a dash separated integer range 
+--chr=1-10  
+You may also combine a range with a list- like this (range always first) 
 --chr=1-10,X,Y,21 (adding X,Y,21 to the END of the above list)
-It is possible to use the range and even the range + list with the --region command... but easily screwed up.
-The dash delimited region specifications will be applied in per chr order of the complete list generated from --chr
 
 Finally, the “INFO” field in vcf files often contains information that might be of interest but otherwise is not conveniently formatted.  VCF2R enables you to include any valid INFO subfield (VCF2R learns these from input file) through use of the --info command line option.  To include a INFO subfield with the name “AT” and “SVLEN”
  
@@ -89,9 +87,12 @@ BY ADDING A DEPARSE flag- this option is a bare word and does not accept a value
 perl VCF2R_V1.0_pl --field=REF,QUAL --info=AT,SVLEN 
 --deparse --out outputFileName inputFile.vcf
 
-Expanding on the VCF2R ability to output bounded chromosome regions.  VCF2R uses an efficient binary search strategy to quickly find the bp coordinate range specified within --region.  It is NOT necessary to provide bp coordinates that exist in the vcf file.  If you DO provide exact (existing) coordinates VCF2R guarantees that it will find and use data precisely bounded by your provided coordinates.  If any of the coordinates you provide in--region are not called and thus do not exist in the file, VCF2R will find the nearest coordinate to this position, inform you of its bp position as compared to your request and generate output within those bounds.  VCF2R does not guarantee which of the two nearest (high or low) coordinates it will choose- except if you specify coordinates outside of the data limits reducing this to single sided problem (guaranteeing it use the CLOSEST coordinate).
+ADDITIONAL FEATURES  --region
+VCF2R uses an efficient binary search strategy to quickly find the bp coordinate range specified within --region.  It is NOT necessary to provide bp coordinates that exist in the vcf file.  If you DO provide exact (existing) coordinates VCF2R guarantees that it will find and use data precisely bounded by your provided coordinates.  If any of the coordinates you provide in--region are not called and thus do not exist in the file, VCF2R will find the nearest coordinate to this position, inform you of its bp position as compared to your request and generate output within those bounds.  VCF2R does not guarantee which of the two nearest (high or low) coordinates it will choose- except if you specify coordinates outside of the data limits reducing this to single sided problem (guaranteeing it use the CLOSEST coordinate).
 
-It is likely (but not guaranteed) that given identical approximate input coordinates VCF2R will generate identical output coordinates (e.g. repeating any given input file run)- but this is NOT ENFORCED and we suggest you do NOT rely on this - or at least inspect the output (VCF2R generates verbose output to STDERR) to confirm its doing what you think it is.  If your running it identically twice and looking for a different answer this is the ONLY place that *might* occur- if you can demonstrate this is NOT the case please inform me. 
+
+READ on for final details, memory utilization, and benchmarking- 
+It is likely (but not guaranteed) that given identical approximate input coordinates VCF2R will generate identical output coordinates- but this is NOT ENFORCED and we suggest you do NOT rely on this - or at least inspect the output (VCF2R generates verbose output to STDERR) to confirm its doing what you think it is.  If your running it identically twice and looking for a different answer this is the ONLY place that *might* occur- if you can demonstrate this is NOT the case please inform me. 
 
 Finally, VCF2R generates some perhaps useful information and prints this to STDERR dynamically during its run.  Simple inspection of this output will let you know if anything went wrong (e.g. you asked for a invalid field).  If the VCF2R output does not look like you expected, look here it may have told you what went wrong.  It also reports progress, in particular it provides verbose information on the binary serach, informing you each time it completes a chromosome chunk and includes time stamps for processing.  
 
@@ -100,3 +101,5 @@ Finally-finally for those interested in processing speed and memory management. 
 perl VCF2R_V1.pl --field=CHROM,POS,ID,REF,ALT,QUAL --info=DP,AF --out test.out input.vcf 
 
 I cannot guarantee memory utilization rates- SV2R hashes chromosome sized data chunks to memory and then internally processes for output- this greatly eases the implementation of chromosome length binning etc- however memory utilization will scale with the largest single chromosome data set on a per POS basis- but is essentially independent of inclusion (or exclusion) of command line arguments.  Said another way, if you have approximately 1/2 million variants called for the largest single chromosome in your data set your memory utilization will be <3.2 Gb- this is quite reasonable.  Memory utilization is however not strictly linear with data size- nor is processing speed.
+
+

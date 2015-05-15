@@ -30,10 +30,21 @@ sub ExecuteScript{
     LINE: while(my @returnVals = LoadData($VCF_in_FH, $lastFile_POS, $usrChr_SegmentsHsh_ref)){
         my ($SVbyChr_Hsh_ref, $chr);
         ($SVbyChr_Hsh_ref, $chr, $lastFile_POS) = @returnVals; 
+#debug
+#        my $newJunk;
+#        for  (0 .. $#{$$SVbyChr_Hsh_ref{$chr}}){
+#            my @garbage =@{$$SVbyChr_Hsh_ref{$chr}[$_]->{Info}};#{Summary}
+#            my $junkLen = scalar(@garbage);
+#            print "$junkLen \n" if ($junkLen != $newJunk);
+#            $newJunk = $junkLen;
+#        }
+#end debug      
+        last if (eof $VCF_in_FH == 1 && !$chr);
         my $timeNow = localtime();
         print STDERR "Were done loading Chromosome $chr at $timeNow\n";
         my $aryIndxChr_byRegion_ref = FindChrRegionCoords($usrChr_SegmentsHsh_ref, $chr, $SVbyChr_Hsh_ref);
         my $outputHsh_ref = GenerateOUTPUT($aryIndxChr_byRegion_ref, $output_Field_IndxHsh_ref, $SVbyChr_Hsh_ref);
+        undef %$SVbyChr_Hsh_ref;
         my ($write_HeaderAry_ref, $fieldLen);
         ($write_HeaderAry_ref, $fieldLen, $header_Write_test) = Parse_OUTPUT($OUT_file_FH, $outputHsh_ref, $valid_VCF_fieldsAry_ref, 
                                                                              $valid_VCF_infoAry_ref, $deparse, $header_Write_test);
@@ -52,6 +63,8 @@ sub ExecuteScript{
             }
             if ($done == 0){
                 print STDERR "finishing file early, we found all requested Chr\n";
+                my $elapsed = time - $time_Start;
+                print STDERR "Total processing time for $VCFfile was $elapsed seconds!\n";
                 last;
             }
         }
@@ -81,7 +94,7 @@ sub ParseCommand{
          push @Chrs, @listedChr;
         }
     }else{
-        my @Chrs = split(/,/ , $pullChrs) if $pullChrs;
+        @Chrs = split(/,/ , $pullChrs) if $pullChrs;
     }
     my @Regions = split(/-/ , $pullRegions) if $pullRegions;
     my %usrChr_Segments; #container for chr and region information
@@ -109,7 +122,7 @@ sub LoadHeader{
         my @currentLine = split (/\t/, $line);
         my @infoData = split (/;/, $currentLine[7]);
         foreach (@infoData){ 
-            $_ =~ m/([a-zA-Z]+)=/g;
+            $_ =~ m/([a-zA-Z0-9]+)=/g;
             push @infoHeader, $1;
         }
         return(\@fieldsHeader, \@infoHeader, $lastFile_POS);
@@ -133,7 +146,7 @@ sub LoadData{
         $chr_Regex = qr/\A$currentLine[0]\z/i unless ($chr_Regex);
         $currentLine[0] =~ m/$chr_Regex/ ? $lastFile_POS = tell($VCF_file) : return(\%SVbyChr, $chr, $lastFile_POS); 
         my @infoData = split (/;/ , $currentLine[7]);
-        s/[a-zA-Z]+=//g for @infoData; #remove header from info fields retain data
+        s/[a-zA-Z0-9]+=//g for @infoData; #remove header from info fields retain data
         $currentLine[7] = '';  #null value saves hash memory- actual values retained under diff hash key- DO NOT DELETE index pos will be wrong later
         if (exists $singleLoci{$currentLine[0]}{$currentLine[1]}){ #warn of variant calls at redundant Chr, Pos (should not exist)
             warn "Chr $currentLine[0] at $currentLine[1] has previously been called- and will NOT be RECORDED!\nThe consensus seq record for this variant is $currentLine[3]\n";
@@ -306,19 +319,8 @@ sub Parse_OUTPUT{
         $index++;
     }
     #check ouputHsh_ref for data consistency prior to parsing header to include subfield indicies
-    my $counter = 0;
-    my ($fieldLen, $priorLen);
-    for (@fields_VCF){  #confirm identical output lengths or die due to corrupt data ouput 
-        if (exists $$outputHsh_ref{$_}){
-            $fieldLen = $#{$$outputHsh_ref{$_}};
-            $priorLen = $fieldLen if ($counter == 0);
-            $counter++;
-        }
-        if ($counter > 0){
-            die "INTERNAL ERROR uneven array lengths at MAIN:sub:WriteOutputFile.\n" if ($priorLen != $fieldLen);
-            $priorLen = $fieldLen;
-        }
-    }
+    CheckFieldLen(\@fields_VCF, $outputHsh_ref);
+    my $fieldLen = CheckFieldLen(\@info_VCF, $outputHsh_ref);
     my (@write_Header, @header); #begin parsing header-- find fields that need to be expanded- include suffix for internal field #
     LINE: for my $field (@fields_VCF){
         if ($field eq "CHROM" || $field eq "POS"){
@@ -353,8 +355,28 @@ sub Parse_OUTPUT{
     }
     return (\@write_Header, $fieldLen, $header_EXISTS)
 }
+
+sub CheckFieldLen{
+    my ($fieldType_Ary_ref, $outputHsh_ref) = @_ ;
+    my $counter = 0;
+    my ($fieldLen, $priorLen);
+    for (@$fieldType_Ary_ref){  #confirm identical output lengths or die due to corrupt data ouput 
+        if (exists $$outputHsh_ref{$_}){
+            $fieldLen = $#{$$outputHsh_ref{$_}};
+            $priorLen = $fieldLen if ($counter == 0);
+            $counter++;
+        }
+        if ($counter > 0){
+            die "INTERNAL ERROR uneven array lengths in a data field contained within this lise\n@$fieldType_Ary_ref\n MAIN:sub:WriteOutputFile.\n" if ($priorLen != $fieldLen);
+            $priorLen = $fieldLen;
+        }
+    }
+    return $fieldLen;
+}
+
 sub WriteOUT{
     my ($outFile, $write_HeaderAry_ref, $fieldLen, $outputHsh_ref, $deparse) = @_;
+    my ($count, $priorLineLength);
     for my $line_Num (0 .. $fieldLen){
         my @line; #container for ouput per line
         push @line , ${$outputHsh_ref}{CHROM}[$line_Num];
@@ -373,6 +395,19 @@ sub WriteOUT{
             else{
                 push @line, $parse_Line;
             }
+        }
+        my $lineLength = @line;
+        unless ($count){
+            $priorLineLength = $lineLength;
+            $count = 1;
+            print STDERR "Tracking output field lengths for consistency\n";
+        }else{
+            print STDERR "WARN-output field lengths inconsistent!\nLast $priorLineLength\tCurrent $lineLength\n" if ($priorLineLength != $lineLength);
+            print STDERR "Current Line is\n @line\n" if ($priorLineLength != $lineLength);
+            $priorLineLength = $lineLength;
+        }
+        for (0 .. $#line){
+           $line[$_] = "." if ($line[$_] eq ""); 
         }
         print $outFile join ("\t", @line) . "\n";
     }
